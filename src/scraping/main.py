@@ -50,16 +50,15 @@ def launch_browser(url):
     driver = uc.Chrome(options=get_chrome_options())
     driver.get(url)
 
-    element = driver.find_element(By.CSS_SELECTOR, '[data-testid="CONTEXTUAL_SEARCH_TITLE"]')
-    ads_quant = int(element.text.split(" ")[0].replace(".", ""))
-    page_quant = math.ceil(ads_quant / 12) 
-
     write_csv_headers()
-
     page = 1
     while True:
-        sleep_time = randint(1, 5)
         print(f"\nPage: {page}")
+
+        if page == 1:
+            get_current_grid_ads(driver, page)
+            page += 1
+            continue
 
         try:
             wait = WebDriverWait(driver, 10)
@@ -80,7 +79,10 @@ def launch_browser(url):
         try:
             button.click()
 
-            print("Successful click!")
+            print("Successful click! Reading grid data...")
+            sleep(1)
+            get_current_grid_ads(driver, page)
+
             page += 1
         except ElementClickInterceptedException as e:
             print("Error! Click intercepted. Trying to accept cookies.")
@@ -94,7 +96,10 @@ def launch_browser(url):
                 driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button)
                 button.click()
 
-                print("Successful retry!")
+                print("Successful retry! Reading grid data...")
+                sleep(1)
+                get_current_grid_ads(driver, page)
+
                 page += 1
             except Exception as e2:
                 print("Retry failed:", e2)
@@ -102,7 +107,7 @@ def launch_browser(url):
         except Exception as e:
             print("Error:", e)
                 
-        sleep(sleep_time)
+        sleep(randint(1, 5))
 
     driver.quit()
 
@@ -117,6 +122,37 @@ def write_csv_headers():
         writer.writerow(header)
 
 
+def get_current_grid_ads(driver, page):
+    ad_cards = driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]')
+
+    total_ad_quant = len(ad_cards)
+    collected_ad_quant = 12 * (page - 1)
+    grid_ad_quant = total_ad_quant - collected_ad_quant
+
+    print(page, total_ad_quant, collected_ad_quant, grid_ad_quant)
+
+    for i in range(len(ad_cards), len(ad_cards) - grid_ad_quant, -1):
+        ad_xpath = f'(//*[@data-testid="house-card-container"])[{i}]'
+        ad_card = driver.find_element(By.XPATH, ad_xpath)
+
+        ad_card_link = ad_card.find_element(By.TAG_NAME, "a").get_attribute("href")
+        ad_id = ad_card_link.split("imovel/")[1].split("/")[0]
+
+        property_info = ad_card.find_element(By.TAG_NAME, "h3").text
+        property_location = ad_card.find_element(By.TAG_NAME, "h2").text
+        property_prices_info = ad_card.find_elements(By.TAG_NAME, "p")
+
+
+        print(ad_id)
+        """
+        print(property_info)
+        print(property_location)
+        print(property_prices_info[0].text)
+        print(property_prices_info[1].text)
+        print("\n")
+        """
+
+
 def accept_cookies(driver):
     accept_cookies_button = driver.find_element(By.ID, "c-s-bn")
     accept_cookies_button.click()
@@ -126,4 +162,4 @@ links = get_links()
 for link in links:
     website = link
     launch_browser(website)
-    sleep(randint(5, 15))
+    sleep(randint(1, 5))
