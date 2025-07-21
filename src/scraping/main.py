@@ -1,6 +1,7 @@
 import os
-import math
+import random
 import undetected_chromedriver as uc
+import re
 import traceback
 import csv
 from random import randint
@@ -15,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 base_path = os.path.dirname(os.path.abspath(__file__))
-ids = []
+
 
 def get_links():
     file_path = os.path.join(base_path, "utils", "links.txt")
@@ -56,7 +57,7 @@ def launch_browser(url):
         print(f"\nPage: {page}")
 
         if page == 1:
-            get_current_grid_ads(driver, page)
+            get_current_grid_ads(driver, page, 0)
             page += 1
             continue
 
@@ -77,28 +78,25 @@ def launch_browser(url):
             traceback.print_exc()
         
         try:
+            ads_quant_before_click = len(driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]'))
             button.click()
 
             print("Successful click! Reading grid data...")
-            sleep(1)
-            get_current_grid_ads(driver, page)
+            get_current_grid_ads(driver, page, ads_quant_before_click)
 
             page += 1
         except ElementClickInterceptedException as e:
             print("Error! Click intercepted. Trying to accept cookies.")
-
-            sleep(1)
             accept_cookies(driver)
-            sleep(1)
 
             try:
                 button = driver.find_element(By.ID, "see-more")
                 driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button)
+                ads_quant_before_click = len(driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]'))
                 button.click()
 
                 print("Successful retry! Reading grid data...")
-                sleep(1)
-                get_current_grid_ads(driver, page)
+                get_current_grid_ads(driver, page, ads_quant_before_click)
 
                 page += 1
             except Exception as e2:
@@ -106,8 +104,6 @@ def launch_browser(url):
         
         except Exception as e:
             print("Error:", e)
-                
-        sleep(randint(1, 5))
 
     driver.quit()
 
@@ -116,13 +112,23 @@ def write_csv_headers():
     csv_file_path = os.path.join(base_path, os.pardir, 'data', 'properties_data.csv')
     csv_file_path = os.path.abspath(csv_file_path)
 
-    header = ["property_id", "district", "property_type", "total_price", "condo_fee", "area", "bedroom_qnt", "bathroom_qnt", "parking_spaces_qnt", "sq_m_price"]
+    header = ["property_id", "address", "neighborhood", "city", "property_type", "total_price", "condo_fee", "area", "sq_m_price", "bedroom_qnt", "parking_spaces_qnt"]
     with open(csv_file_path, 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(header)
 
 
-def get_current_grid_ads(driver, page):
+def write_property_info_on_csv(row):
+    file_path = os.path.join(base_path, "../data", "properties_data.csv")
+    with open(file_path, 'a', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(row)
+
+
+def get_current_grid_ads(driver, page, ads_len_before_click):
+    sleep(random.uniform(5, 10))
+    wait = WebDriverWait(driver, 10)
+    wait.until(lambda driver: len(driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]')) > ads_len_before_click)
     ad_cards = driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]')
 
     total_ad_quant = len(ad_cards)
@@ -136,24 +142,66 @@ def get_current_grid_ads(driver, page):
         ad_card = driver.find_element(By.XPATH, ad_xpath)
 
         ad_card_link = ad_card.find_element(By.TAG_NAME, "a").get_attribute("href")
-        ad_id = ad_card_link.split("imovel/")[1].split("/")[0]
-
         property_info = ad_card.find_element(By.TAG_NAME, "h3").text
-        property_location = ad_card.find_element(By.TAG_NAME, "h2").text
+        ad_description = ad_card.find_elements(By.TAG_NAME, "h2")[0].text
+        property_location = ad_card.find_elements(By.TAG_NAME, "h2")[1].text
         property_prices_info = ad_card.find_elements(By.TAG_NAME, "p")
 
+        extract_property_data({
+            "ad_card_link": ad_card_link,
+            "property_info": property_info,
+            "ad_description": ad_description,
+            "property_location": property_location,
+            "property_prices_info": property_prices_info
+        })
 
-        print(ad_id)
-        """
-        print(property_info)
-        print(property_location)
-        print(property_prices_info[0].text)
-        print(property_prices_info[1].text)
-        print("\n")
-        """
+
+def extract_property_data(grid_data):
+    id = grid_data["ad_card_link"].split("imovel/")[1].split("/")[0]
+    area = bedroom_quant = parking_spaces_quant = 0
+
+    area_match = re.search(r"(\d+)\s*m²", grid_data["property_info"])
+    bedrooms_match = re.search(r"(\d+)\s*quarto", grid_data["property_info"])
+    parking_match = re.search(r"(\d+)\s*vaga", grid_data["property_info"])
+
+    if area_match:
+        area = int(area_match.group(1))
+    if bedrooms_match:
+        bedroom_quant = int(bedrooms_match.group(1))
+    if parking_match:
+        parking_spaces_quant = int(parking_match.group(1))
+    
+    main_address = grid_data["property_location"].split(" · ")[0]
+    city = grid_data["property_location"].split(" · ")[1]
+
+    if len(main_address.split(", ")) > 1:
+        address = grid_data["property_location"].split(",")[0]
+        neighborhood = grid_data["property_location"].split(", ")[1].split(" · ")[0]
+    else:
+        address = main_address
+        neighborhood = ""
+
+    total_price = int(grid_data["property_prices_info"][0].text.replace("R$ ", "").replace(".", ""))
+    condo_fee = int(grid_data["property_prices_info"][1].text.split(" Condo.")[0].replace("R$ ", "").replace(".", ""))
+
+    sq_m_price = 0
+    if area:
+        sq_m_price = round((total_price / area), 2)
+
+    property_type = ""
+    if "apartamento" in grid_data["ad_description"].lower():
+        property_type = "apartamento"
+    elif "casa" in grid_data["ad_description"].lower():
+        property_type = "casa"
+    elif "studio" in grid_data["ad_description"].lower() or "kit" in grid_data["ad_description"].lower():
+        property_type = "studio/kitnet"
+
+    print(id, address, neighborhood, city, property_type, total_price, condo_fee, area, sq_m_price, bedroom_quant, parking_spaces_quant)
+    
 
 
 def accept_cookies(driver):
+    sleep(random.uniform(5, 10))
     accept_cookies_button = driver.find_element(By.ID, "c-s-bn")
     accept_cookies_button.click()
 
@@ -162,4 +210,4 @@ links = get_links()
 for link in links:
     website = link
     launch_browser(website)
-    sleep(randint(1, 5))
+    sleep(random.uniform(5, 10))

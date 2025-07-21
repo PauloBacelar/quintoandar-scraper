@@ -1,1 +1,1 @@
-property_id,district,property_type,total_price,condo_fee,area,bedroom_qnt,bathroom_qnt,parking_spaces_qnt,sq_m_price
+property_id,address,neighborhood,city,property_type,total_price,condo_fee,area,sq_m_price,bedroom_qnt,parking_spaces_qnt
