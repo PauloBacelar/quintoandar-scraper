@@ -16,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 base_path = os.path.dirname(os.path.abspath(__file__))
-
+total_collected_ads = 0
 
 def get_links():
     file_path = os.path.join(base_path, "utils", "links.txt")
@@ -44,11 +44,16 @@ def get_chrome_options():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument(f"user-agent={get_user_agent()}")
+    options.add_experimental_option("prefs", {
+        "profile.managed_default_content_settings.images": 2
+    })
     return options
 
 
 def launch_browser(url):
     driver = uc.Chrome(options=get_chrome_options())
+    driver.execute_cdp_cmd('Network.enable', {})
+    driver.execute_cdp_cmd('Network.setBlockedURLs', {"urls": ["*.png", "*.jpg", "*.jpeg", "*.gif"]})
     driver.get(url)
 
     write_csv_headers()
@@ -126,16 +131,13 @@ def write_property_info_on_csv(row):
 
 
 def get_current_grid_ads(driver, page, ads_len_before_click):
-    sleep(random.uniform(5, 10))
+    sleep(random.uniform(1, 2))
     wait = WebDriverWait(driver, 10)
     wait.until(lambda driver: len(driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]')) > ads_len_before_click)
     ad_cards = driver.find_elements(By.CSS_SELECTOR, '[data-testid="house-card-container"]')
 
-    total_ad_quant = len(ad_cards)
-    collected_ad_quant = 12 * (page - 1)
-    grid_ad_quant = total_ad_quant - collected_ad_quant
-
-    print(page, total_ad_quant, collected_ad_quant, grid_ad_quant)
+    grid_ad_quant = len(ad_cards) - ads_len_before_click
+    print(page, grid_ad_quant)
 
     for i in range(len(ad_cards), len(ad_cards) - grid_ad_quant, -1):
         ad_xpath = f'(//*[@data-testid="house-card-container"])[{i}]'
@@ -157,6 +159,7 @@ def get_current_grid_ads(driver, page, ads_len_before_click):
 
 
 def extract_property_data(grid_data):
+    global total_collected_ads
     id = grid_data["ad_card_link"].split("imovel/")[1].split("/")[0]
     area = bedroom_quant = parking_spaces_quant = 0
 
@@ -196,12 +199,13 @@ def extract_property_data(grid_data):
     elif "studio" in grid_data["ad_description"].lower() or "kit" in grid_data["ad_description"].lower():
         property_type = "studio/kitnet"
 
+    total_collected_ads += 1
     print(id, address, neighborhood, city, property_type, total_price, condo_fee, area, sq_m_price, bedroom_quant, parking_spaces_quant)
     
 
 
 def accept_cookies(driver):
-    sleep(random.uniform(5, 10))
+    sleep(random.uniform(1, 2))
     accept_cookies_button = driver.find_element(By.ID, "c-s-bn")
     accept_cookies_button.click()
 
@@ -209,5 +213,6 @@ def accept_cookies(driver):
 links = get_links()
 for link in links:
     website = link
+    total_collected_ads = 0
     launch_browser(website)
-    sleep(random.uniform(5, 10))
+    sleep(random.uniform(1, 2))
