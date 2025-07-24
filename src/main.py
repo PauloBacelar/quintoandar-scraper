@@ -114,10 +114,15 @@ def make_request(payload, headers, sector_id):
 
 
 def export_sectors(filename):
+    sectors_no_coords = {
+        id: {k: v for k, v in data.items() if k != "coords"}
+        for id, data in sectors.items()
+    }
+
     json_file_path = os.path.join(base_path, os.pardir, 'src/export', f'sectors-{filename.split(".")[0]}.json')
     json_file_path = os.path.abspath(json_file_path)
     with open(json_file_path, "w") as f:
-        json.dump(sectors, f)
+        json.dump(sectors_no_coords, f, indent=2)
 
 
 for filename in os.listdir("src/data"):
