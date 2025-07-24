@@ -1,0 +1,48 @@
+{
+  "filters": {
+    "businessContext": "SALE",
+    "location": {
+      "viewport": {},
+      "geoJson": ""
+    },
+    "availability": "ANY",
+    "occupancy": "ANY"
+  },
+  "sorting": {
+    "criteria": "RELEVANCE",
+    "order": "DESC"
+  },
+  "pagination": {},
+  "fields": [
+    "id",
+    "rent",
+    "totalCost",
+    "salePrice",
+    "iptuPlusCondominium",
+    "area",
+    "address",
+    "regionName",
+    "city",
+    "visitStatus",
+    "activeSpecialConditions",
+    "type",
+    "forRent",
+    "forSale",
+    "isPrimaryMarket",
+    "bedrooms",
+    "parkingSpaces",
+    "suites",
+    "listingTags",
+    "yield",
+    "yieldStrategy",
+    "neighbourhood",
+    "categories",
+    "bathrooms",
+    "isFurnished",
+    "installations",
+    "amenities",
+    "shortRentDescription",
+    "shortSaleDescription"
+  ],
+  "topics": []
+}
