@@ -8,6 +8,7 @@ from shapely.geometry import Polygon, MultiPolygon
 
 
 base_path = os.path.dirname(os.path.abspath(__file__))
+qnt_ads_analyzed = 0
 sectors = {}
 
 def fill_sectors(gdf):
@@ -49,7 +50,7 @@ def get_payload_structure():
         payload = json.load(file)
     
     payload["filters"]["location"]["viewport"] = get_bounds()
-    payload["pagination"] = { "pageSize": 250, "offset": 0 }
+    payload["pagination"] = { "pageSize": 500, "offset": 0 }
 
     return payload
 
@@ -86,9 +87,10 @@ def get_geojson_property(coords):
     return json.dumps(geojson_obj)
 
 
-def make_request(payload, headers, sector_id, qnt_ads_analyzed):
+def make_request(payload, headers, sector_id):
     base_url = "https://apigw.prod.quintoandar.com.br/house-listing-search/v2/search/list"
     payload["filters"]["location"]["geoJson"] = get_geojson_property(sectors[sector_id]["coords"])
+    global qnt_ads_analyzed
 
     print(f"Analyzing sector {sector_id} in {sectors[sector_id]["distrito_setor"]} - {sectors[sector_id]["municipio_setor"]}")
 
@@ -140,11 +142,9 @@ for filename in os.listdir("src/data"):
     payload = get_payload_structure()
     headers = get_headers()
 
-    qnt_ads_analyzed = 0
-
     for id in sectors.keys():
         try:
-            make_request(payload, headers, id, qnt_ads_analyzed)
+            make_request(payload, headers, id)
             export_sectors(filename)
         except requests.exceptions.ConnectionError:
             print("No internet connection. Waiting 5 minutes until making request again")
