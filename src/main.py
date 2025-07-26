@@ -86,7 +86,7 @@ def get_geojson_property(coords):
     return json.dumps(geojson_obj)
 
 
-def make_request(payload, headers, sector_id):
+def make_request(payload, headers, sector_id, qnt_ads_analyzed):
     base_url = "https://apigw.prod.quintoandar.com.br/house-listing-search/v2/search/list"
     payload["filters"]["location"]["geoJson"] = get_geojson_property(sectors[sector_id]["coords"])
 
@@ -99,16 +99,20 @@ def make_request(payload, headers, sector_id):
         time.sleep(300)
         response = requests.post(base_url, json=payload, headers=headers)
     except Exception as e:
-        print("Unexpected error")
-        response = None
+        print("Unexpected error", e)
+        return
 
     if response.ok:
         data = response.json()
         
-        print(f"Anunciados {len(data['hits']['hits'])} imóveis no setor")
+        print(f"{len(data['hits']['hits'])} ad(s) identified in the sector")
         for i in range(len(data['hits']['hits'])):
-            print(f"{data['hits']['hits'][i]['_source']['type']} - ID {data['hits']['hits'][i]['_source']['id']}")
             sectors[sector_id]["ads"].append(data['hits']['hits'])
+
+            if i == len(data['hits']['hits'] - 1):
+                print("Ads collected successfully")
+                qnt_ads_analyzed += len(data['hits']['hits'])
+                print(f"Total: {qnt_ads_analyzed}")
     else:
         print("Error", response.status_code)
     
@@ -136,9 +140,11 @@ for filename in os.listdir("src/data"):
     payload = get_payload_structure()
     headers = get_headers()
 
+    qnt_ads_analyzed = 0
+
     for id in sectors.keys():
         try:
-            make_request(payload, headers, id)
+            make_request(payload, headers, id, qnt_ads_analyzed)
             export_sectors(filename)
         except requests.exceptions.ConnectionError:
             print("No internet connection. Waiting 5 minutes until making request again")
