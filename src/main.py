@@ -90,7 +90,7 @@ def make_request(payload, headers, sector_id, qnt_ads_analyzed):
     base_url = "https://apigw.prod.quintoandar.com.br/house-listing-search/v2/search/list"
     payload["filters"]["location"]["geoJson"] = get_geojson_property(sectors[sector_id]["coords"])
 
-    print(f"Analisando setor {sector_id} em {sectors[sector_id]["distrito_setor"]} - {sectors[sector_id]["municipio_setor"]}")
+    print(f"Analyzing sector {sector_id} in {sectors[sector_id]["distrito_setor"]} - {sectors[sector_id]["municipio_setor"]}")
 
     try:
         response = requests.post(base_url, json=payload, headers=headers)
@@ -109,7 +109,7 @@ def make_request(payload, headers, sector_id, qnt_ads_analyzed):
         for i in range(len(data['hits']['hits'])):
             sectors[sector_id]["ads"].append(data['hits']['hits'])
 
-            if i == len(data['hits']['hits'] - 1):
+            if i == len(data['hits']['hits']) - 1:
                 print("Ads collected successfully")
                 qnt_ads_analyzed += len(data['hits']['hits'])
                 print(f"Total: {qnt_ads_analyzed}")
