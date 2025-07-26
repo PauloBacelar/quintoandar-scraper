@@ -98,6 +98,9 @@ def make_request(payload, headers, sector_id):
         print("No internet connection. Waiting 5 minutes until making request again")
         time.sleep(300)
         response = requests.post(base_url, json=payload, headers=headers)
+    except Exception as e:
+        print("Unexpected error")
+        response = None
 
     if response.ok:
         data = response.json()
@@ -110,7 +113,7 @@ def make_request(payload, headers, sector_id):
         print("Error", response.status_code)
     
     print("")
-    time.sleep(random.uniform(0.75, 1.25))
+    time.sleep(random.uniform(1, 3))
 
 
 def export_sectors(filename):
@@ -121,8 +124,8 @@ def export_sectors(filename):
 
     json_file_path = os.path.join(base_path, os.pardir, 'src/export', f'sectors-{filename.split(".")[0]}.json')
     json_file_path = os.path.abspath(json_file_path)
-    with open(json_file_path, "w") as f:
-        json.dump(sectors_no_coords, f, indent=2)
+    with open(json_file_path, "w", encoding="utf-8") as f:
+        json.dump(sectors_no_coords, f, ensure_ascii=False, indent=2)
 
 
 for filename in os.listdir("src/data"):
