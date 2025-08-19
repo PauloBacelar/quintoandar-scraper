@@ -1,2 +1,3 @@
 src/analysis
-src/.ipynb_checkpoints
+*/.ipynb_checkpoints
+*/*/.ipynb_checkpoints
