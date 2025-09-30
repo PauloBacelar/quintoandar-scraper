@@ -1,0 +1,9 @@
+requests==2.32.3
+beautifulsoup4==4.12.3
+selenium==4.25.0
+pandas==2.2.3
+numpy==2.1.2
+matplotlib==3.9.2
+seaborn==0.13.2
+notebook==7.2.2
+jupyterlab==4.2.5
